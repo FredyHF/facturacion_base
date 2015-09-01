@@ -153,6 +153,14 @@
          </a>
       </li>
       {/if}
+      {if="$fsc->mostrar_tab_kardex"}
+      <li role="presentation">
+         <a href="#kardex" aria-controls="kardex" role="tab" data-toggle="tab">
+            <span class="glyphicon glyphicon-transfer" aria-hidden="true"></span>
+            <span class="hidden-xs">&nbsp; Kárdex</span>
+         </a>
+      </li>
+      {/if}
       {loop="$fsc->extensions"}
          {if="$value->type=='tab'"}
          <li role="presentation">
@@ -558,7 +566,7 @@
          <div class="container-fluid">
             <div class="row">
                <div class="col-sm-12">
-                  <h2>Regularizaciones de stock:</h2>
+                  <h2>Regularizaciones del stock:</h2>
                </div>
             </div>
          </div>
@@ -619,6 +627,50 @@
                   <td colspan="3" class="bg-warning">Sin resultados.</td>
                </tr>
                {/loop}
+            </table>
+         </div>
+      </div>
+      {/if}
+      {if="$fsc->mostrar_tab_kardex"}      
+      <div role="tabpanel" class="tab-pane" id="kardex">
+         <div class="table-responsive">
+         	<h4><b>KARDEX DE ARTICULO: ({$fsc->articulo->referencia}) {$fsc->articulo->descripcion}</b></h4>
+            <table class="table table-hover">
+               <thead>
+                  <tr>
+                     <th class="text-left">#</th>
+                     <th class="text-left">Fecha</th>
+                     <th class="text-left">Hora</th>
+                     <th class="text-left">Detalle</th>
+                     <th class="text-right">Entrada</th>
+                     <th class="text-right">Salida</th>
+                     <th class="text-right">Saldo</th>
+
+                  </tr>
+               </thead>
+               {loop="$fsc->kardex"}
+                <tr{if="$value->kcantidad==0"} class="bg-danger"{/if}>
+                  <td class="text-left">-</td>
+                  <td class="text-left">{$value->kfecha}</td>
+                  <td class="text-left">{$value->khora}</td>
+                  <td class="text-left">{$value->kdetalle}</td>
+                  <td class="text-right">
+                  	 {if="$value->kmovimiento=='i'"}
+                     	{$value->kcantidad}
+                     {/if}
+                  </td>
+                  <td class="text-right">
+                     {if="$value->kmovimiento=='o'"}
+                     	{$value->kcantidad}
+                     {/if}
+                  </td>
+                  <td class="text-right"></td>
+               </tr>
+               {else}
+               <tr class="bg-warning">
+                  <td colspan="6">Sin resultados.</td>
+               </tr> 
+               {/loop} 
             </table>
          </div>
       </div>
