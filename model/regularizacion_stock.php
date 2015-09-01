@@ -53,33 +53,54 @@ class regularizacion_stock extends fs_model
     */
    public $nick;
    
-   public function __construct($r = FALSE)
+   public function __construct($r = FALSE, $o = 's')
    {
       parent::__construct('lineasregstocks', 'plugins/facturacion_base/');
-      if($r)
-      {
-         $this->id = $this->intval($r['id']);
-         $this->idstock = $this->intval($r['idstock']);
-         $this->cantidadini = floatval($r['cantidadini']);
-         $this->cantidadfin = floatval($r['cantidadfin']);
-         $this->codalmacendest = $r['codalmacendest'];
-         $this->fecha = date('d-m-Y', strtotime($r['fecha']));
-         $this->hora = $r['hora'];
-         $this->motivo = $r['motivo'];
-         $this->nick = $r['nick'];
-      }
-      else
-      {
-         $this->id = NULL;
-         $this->idstock = NULL;
-         $this->cantidadini = 0;
-         $this->cantidadfin = 0;
-         $this->codalmacendest = NULL;
-         $this->fecha = date('d-m-Y');
-         $this->hora = date('H:i:s');
-         $this->motivo = '';
-         $this->nick = NULL;
-      }
+	  if($o == 's') {
+		  if($r)
+		  {
+			 $this->id = $this->intval($r['id']);
+			 $this->idstock = $this->intval($r['idstock']);
+			 $this->cantidadini = floatval($r['cantidadini']);
+			 $this->cantidadfin = floatval($r['cantidadfin']);
+			 $this->codalmacendest = $r['codalmacendest'];
+			 $this->fecha = date('d-m-Y', strtotime($r['fecha']));
+			 $this->hora = $r['hora'];
+			 $this->motivo = $r['motivo'];
+			 $this->nick = $r['nick'];
+		  }
+		  else
+		  {
+			 $this->id = NULL;
+			 $this->idstock = NULL;
+			 $this->cantidadini = 0;
+			 $this->cantidadfin = 0;
+			 $this->codalmacendest = NULL;
+			 $this->fecha = date('d-m-Y');
+			 $this->hora = date('H:i:s');
+			 $this->motivo = '';
+			 $this->nick = NULL;
+		  }
+	  } else {
+	      if($r)
+		  {
+			 //$this->id = $this->intval($r['id']);
+			 $this->kfecha = date('Y-m-d', strtotime($r['kfecha']));
+			 $this->khora = $r['khora'];
+			 $this->kdetalle = $r['kdetalle'];
+			 $this->kmovimiento = $o;
+			 $this->kcantidad = $r['kcantidad'];			 
+		  }
+		  else
+		  {
+			 //$this->id = NULL;
+			 $this->kfecha = date('d-m-Y');
+			 $this->khora = date('H:i:s');
+			 $this->kdetalle = '';
+			 $this->kmovimiento = $o;
+			 $this->kcantidad = 0;
+		  }
+	  }
    }
    
    protected function install()
@@ -92,7 +113,7 @@ class regularizacion_stock extends fs_model
       $data = $this->db->select("SELECT * FROM lineasregstocks WHERE id = ".$this->var2str($id).";");
       if($data)
       {
-         return new regularizacion_stock($data[0]);
+         return new regularizacion_stock($data[0],'s');
       }
       else
          return FALSE;
@@ -156,5 +177,127 @@ class regularizacion_stock extends fs_model
       }
       
       return $rlist;
+   }
+   
+   public function array_kardex($array, $on, $order=SORT_ASC)
+	  {
+		$new_array = array();
+		$sortable_array = array();
+	
+		if (count($array) > 0) {
+			foreach ($array as $k => $v) {
+				if (is_array($v)) {
+					foreach ($v as $k2 => $v2) {
+						if ($k2 == $on) {
+							$sortable_array[$k] = $v2;
+						}
+					}
+				} else {
+					$sortable_array[$k] = $v;
+				}
+			}
+	
+			switch ($order) {
+				case SORT_ASC:
+					asort($sortable_array);
+				break;
+				case SORT_DESC:
+					arsort($sortable_array);
+				break;
+			}
+	
+			foreach ($sortable_array as $k => $v) {
+				$new_array[$k] = $array[$k];
+			}
+		}
+		
+		return $new_array;
+	}
+  
+   public function all_from_kardex($ref)
+   {
+	  $rlist = array();
+      
+      /*FHF Kardex - Regularizaciones*/
+	  $data = $this->db->select("
+		  SELECT 
+			lineasregstocks.fecha AS kfecha, 
+			lineasregstocks.hora AS khora, 
+			lineasregstocks.motivo AS kdetalle, 
+			lineasregstocks.cantidadfin AS kcantidad 
+		  FROM lineasregstocks
+		  INNER JOIN stocks ON lineasregstocks.idstock = stocks.idstock
+		  WHERE stocks.referencia = ".$this->var2str($ref)."
+		  ORDER BY lineasregstocks.fecha DESC, lineasregstocks.hora DESC"
+	  );	  		 		
+      if($data)
+      {
+         foreach($data as $d)
+            $rlist[] = new regularizacion_stock($d,'i'); // i = input / entrada
+      }
+	  
+	  /*FHF Kardex - Compras - Facturas de Proveedor*/
+	  $data = $this->db->select("
+		  SELECT 
+			facturasprov.fecha AS kfecha, 
+			facturasprov.hora AS khora, 
+			facturasprov.codigo AS kdetalle, 
+			lineasfacturasprov.cantidad AS kcantidad 
+		  FROM lineasfacturasprov
+		  INNER JOIN facturasprov ON lineasfacturasprov.idfactura = facturasprov.idfactura
+		  WHERE lineasfacturasprov.referencia = ".$this->var2str($ref)."
+		  ORDER BY facturasprov.fecha DESC, facturasprov.hora DESC"
+	  ); 		
+      if($data)
+      {
+         foreach($data as $d)
+            $rlist[] = new regularizacion_stock($d,'i'); // o = output / salida
+      }
+	  /*FHF Kardex - Compras - Pedidos de Proveedor
+	  $data = $this->db->select("SELECT * FROM lineasregstocks WHERE idstock IN
+         (SELECT idstock FROM stocks WHERE referencia = ".$this->var2str($ref).") ORDER BY fecha DESC, hora DESC;");
+	  		 		
+      if($data)
+      {
+         foreach($data as $d)
+            $rlist[] = new regularizacion_stock($d,'k');
+      }
+	  */
+	  /*FHF Kardex - Ventas - Facturas de Cliente*/
+	  $data = $this->db->select("
+		  SELECT 
+			facturascli.fecha AS kfecha, 
+			facturascli.hora AS khora, 
+			facturascli.codigo AS kdetalle, 
+			lineasfacturascli.cantidad AS kcantidad 
+		  FROM lineasfacturascli
+		  INNER JOIN facturascli ON lineasfacturascli.idfactura = facturascli.idfactura
+		  WHERE lineasfacturascli.referencia = ".$this->var2str($ref)."
+		  ORDER BY facturascli.fecha DESC, facturascli.hora DESC"
+	  ); 		
+      if($data)
+      {
+         foreach($data as $d)
+            $rlist[] = new regularizacion_stock($d,'o'); // o = output / salida
+      }
+	  /*FHF Kardex - Ventas - Pedidos de Cliente*/
+	  $data = $this->db->select("
+		  SELECT 
+			pedidoscli.fecha AS kfecha, 
+			pedidoscli.hora AS khora, 
+			pedidoscli.codigo AS kdetalle, 
+			lineaspedidoscli.cantidad AS kcantidad 
+		  FROM lineaspedidoscli
+		  INNER JOIN pedidoscli ON lineaspedidoscli.idpedido = pedidoscli.idpedido
+		  WHERE lineaspedidoscli.referencia = ".$this->var2str($ref)."
+		  ORDER BY pedidoscli.fecha DESC, pedidoscli.hora DESC"
+	  ); 		
+      if($data)
+      {
+         foreach($data as $d)
+            $rlist[] = new regularizacion_stock($d,'o'); // o = output / salida
+      }
+
+	  return $this->array_kardex($rlist, 'kfecha'.'khora', SORT_DESC);
    }
 }
