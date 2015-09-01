@@ -38,6 +38,7 @@ class ventas_articulo extends fs_controller
    public $mostrar_boton_publicar;
    public $mostrar_tab_precios;
    public $mostrar_tab_stock;
+   public $mostrar_tab_kardex;
    public $nuevos_almacenes;
    public $stocks;
    public $equivalentes;
@@ -83,6 +84,20 @@ class ventas_articulo extends fs_controller
          if($ext->type == 'config' AND $ext->text == 'no_tab_stock')
          {
             $this->mostrar_tab_stock = FALSE;
+            break;
+         }
+      }
+	  
+	  /**
+       * Si hay alguna extensión de tipo config y texto no_tab_kardex,
+       * desactivamos la pestaña stock.
+       */
+      $this->mostrar_tab_kardex = TRUE;
+      foreach($this->extensions as $ext)
+      {
+         if($ext->type == 'config' AND $ext->text == 'no_tab_kardex')
+         {
+            $this->mostrar_tab_kardex = FALSE;
             break;
          }
       }
@@ -255,11 +270,12 @@ class ventas_articulo extends fs_controller
          }
          
          /**
-          * Si está desactivado el control de stok en el artículo, no muestro la pestaña.
+          * Si está desactivado el control de stock en el artículo, no muestro la pestaña.
           */
          if($this->articulo->nostock)
          {
             $this->mostrar_tab_stock = FALSE;
+			$this->mostrar_tab_kardex = FALSE;
          }
          
          $this->familia = $this->articulo->get_familia();
@@ -293,6 +309,9 @@ class ventas_articulo extends fs_controller
          $this->regularizaciones = $reg->all_from_articulo($this->articulo->referencia);
          
          $this->equivalentes = $this->articulo->get_equivalentes();
+		 
+		 $kar = new regularizacion_stock();
+		 $this->kardex = $kar->all_from_kardex($this->articulo->referencia);
       }
       else
          $this->new_error_msg("Artículo no encontrado.");
